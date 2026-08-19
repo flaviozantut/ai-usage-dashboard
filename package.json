@@ -1,0 +1,28 @@
+{
+  "name": "ai-usage-dash",
+  "version": "0.1.0",
+  "description": "Dashboard de métricas de uso de IA no trabalho — coleta via hooks/MCP, ingestão em API, consulta via MCP",
+  "type": "module",
+  "scripts": {
+    "dev:api": "tsx watch src/ingest.ts",
+    "start:api": "tsx src/ingest.ts",
+    "mcp": "tsx src/mcp.ts",
+    "collect:claude": "node collectors/claude-code.mjs",
+    "collect:cursor": "node collectors/cursor.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "hono": "^4.6.14",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}
