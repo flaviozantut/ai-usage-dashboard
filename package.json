@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "description": "Dashboard of AI usage metrics at work — collection via hooks writing directly to a local SQLite DB, querying via MCP. No server.",
   "type": "module",
+  "bin": {
+    "ai-usage-mcp": "bin/mcp.mjs",
+    "ai-usage-claude-hook": "hooks/claude-code-hook.mjs",
+    "ai-usage-cursor-hook": "hooks/cursor-hook.mjs",
+    "ai-usage-session-task": "hooks/session-task.mjs",
+    "ai-usage-task-capture": "hooks/task-capture.mjs",
+    "ai-usage-stats": "scripts/task-stats.mjs"
+  },
   "scripts": {
     "mcp": "tsx src/mcp.ts",
     "stats": "node scripts/task-stats.mjs",

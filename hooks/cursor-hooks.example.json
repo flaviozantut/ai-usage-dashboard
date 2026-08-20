@@ -2,7 +2,7 @@
   "version": 1,
   "hooks": {
     "stop": [
-      { "command": "node /Users/flaviozantut/Code/AI/dash/hooks/cursor-hook.mjs" }
+      { "command": "ai-usage-cursor-hook" }
     ]
   }
 }

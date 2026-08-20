@@ -31,29 +31,36 @@ the SQLite file, write the turn's events, and exit. Nothing listens on a port.
 
 ```bash
 npm install                 # no native build — uses Node's built-in SQLite
+npm link                    # puts the ai-usage-* commands on your PATH
 cp .env.example .env
 ```
 
+`npm link` exposes every tool as a **command you can call by name** (`ai-usage-claude-hook`,
+`ai-usage-cursor-hook`, `ai-usage-mcp`, `ai-usage-stats`, …), so nothing below hardcodes an
+absolute path to this repo. Each command resolves its own location, so it works from any
+directory. (Prefer not to link globally? Run them from the repo with `npx ai-usage-<name>`,
+or fall back to `node ./hooks/<file>.mjs` with a path.)
+
 There is **no service to start**. The hooks write to the DB directly and the MCP server is
-spawned on demand by your client. Optionally point everything at a specific DB file (default
-is `metrics.db` at the repo root) in your shell (e.g. `~/.zshrc`):
+spawned on demand by your client. The DB defaults to `metrics.db` at the repo root; set
+`DB_PATH` only if you keep it elsewhere:
 
 ```bash
-export DB_PATH=/Users/flaviozantut/Code/AI/dash/metrics.db
+export DB_PATH="$HOME/somewhere/metrics.db"   # optional; the commands find the repo DB by default
 ```
 
 ### 1. Enable the Claude Code hook
 
-Register the hook in `~/.claude/settings.json` (absolute path):
+Register the hook in `~/.claude/settings.json`:
 
 ```json
 {
   "hooks": {
     "Stop": [
-      { "hooks": [{ "type": "command", "command": "node /Users/flaviozantut/Code/AI/dash/hooks/claude-code-hook.mjs" }] }
+      { "hooks": [{ "type": "command", "command": "ai-usage-claude-hook" }] }
     ],
     "SubagentStop": [
-      { "hooks": [{ "type": "command", "command": "node /Users/flaviozantut/Code/AI/dash/hooks/claude-code-hook.mjs" }] }
+      { "hooks": [{ "type": "command", "command": "ai-usage-claude-hook" }] }
     ]
   }
 }
@@ -68,7 +75,7 @@ Create `~/.cursor/hooks.json` (or `<project>/.cursor/hooks.json`) — see the ex
 [hooks/cursor-hooks.example.json](hooks/cursor-hooks.example.json):
 
 ```json
-{ "version": 1, "hooks": { "stop": [{ "command": "node /Users/flaviozantut/Code/AI/dash/hooks/cursor-hook.mjs" }] } }
+{ "version": 1, "hooks": { "stop": [{ "command": "ai-usage-cursor-hook" }] } }
 ```
 
 For Cursor's **exact tokens**, also export the admin key
@@ -81,8 +88,11 @@ export CURSOR_API_KEY=<cursor-admin-key>
 ### 3. Register the read-only MCP (Claude / Cursor)
 
 ```bash
-claude mcp add ai-usage -- npx tsx /Users/flaviozantut/Code/AI/dash/src/mcp.ts
+claude mcp add ai-usage -- ai-usage-mcp
 ```
+
+For Cursor, the repo already ships [.cursor/mcp.json](.cursor/mcp.json) (runs `npm run mcp`
+from the repo — no path needed).
 
 In the client: *"use the `token_usage` tool (period 30d, group_by model) and make a bar chart"* → artifact/canvas.
 
@@ -122,8 +132,8 @@ happens automatically at the start of the session, in order of precision:
 Hooks involved (registered in `~/.claude/settings.json`):
 
 ```json
-"SessionStart":    [{ "hooks": [{ "type": "command", "command": "node /ABS/hooks/session-task.mjs" }] }],
-"UserPromptSubmit":[{ "hooks": [{ "type": "command", "command": "node /ABS/hooks/task-capture.mjs" }] }]
+"SessionStart":    [{ "hooks": [{ "type": "command", "command": "ai-usage-session-task" }] }],
+"UserPromptSubmit":[{ "hooks": [{ "type": "command", "command": "ai-usage-task-capture" }] }]
 ```
 
 The ID pattern is configurable via `DASH_TASK_PATTERN` (regex). The default is Jira-style
@@ -142,10 +152,11 @@ Query a task's stats straight from Claude Code:
 Returns tokens (in/out/cache), messages, tool calls + error rate,
 p50/p95 latency, per-model breakdown and top tools — all for that issue.
 
-Pieces: [scripts/task-stats.mjs](scripts/task-stats.mjs) (resolves the task and reads the
-local SQLite DB directly via `taskStats()` in [lib/db.mjs](lib/db.mjs)) + the command in
-`~/.claude/commands/dash_stats.md`. Point it at a non-default DB with `DB_PATH`.
-The active task is the session's most recent task state.
+Pieces: the `ai-usage-stats` command ([scripts/task-stats.mjs](scripts/task-stats.mjs) —
+resolves the task and reads the local SQLite DB directly via `taskStats()` in
+[lib/db.mjs](lib/db.mjs)) + the command in `~/.claude/commands/dash_stats.md`. Run it as
+`ai-usage-stats DEMO-100` (or `npm run stats -- DEMO-100` from the repo). Point it at a
+non-default DB with `DB_PATH`. The active task is the session's most recent task state.
 
 ## History backfill (optional, runs once)
 
