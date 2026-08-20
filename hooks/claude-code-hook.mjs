@@ -8,7 +8,9 @@
  *
  * Fail-safe: never blocks Claude Code (exit 0). Idempotent by ext_id.
  *
- * Env: DASH_API, DASH_STATE (dir; default ~/.claude/dash-state)
+ * Writes straight to the local SQLite DB — no server to keep running.
+ *
+ * Env: DB_PATH (SQLite file), DASH_STATE (dir; default ~/.claude/dash-state)
  */
 import { openSync, readSync, closeSync, statSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -16,8 +18,8 @@ import { homedir } from "node:os";
 import { createHash } from "node:crypto";
 import { extractEvents } from "../lib/claude-transcript.mjs";
 import { getTask } from "../lib/task-state.mjs";
+import { insertEvents } from "../lib/db.mjs";
 
-const API = process.env.DASH_API ?? "http://localhost:8787/events";
 const STATE_DIR = process.env.DASH_STATE ?? join(homedir(), ".claude", "dash-state");
 
 async function main() {
@@ -79,14 +81,9 @@ async function main() {
 
   if (events.length) {
     try {
-      await fetch(API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(events),
-        signal: AbortSignal.timeout(3000),
-      });
+      insertEvents(events);
     } catch {
-      return; // network failure: don't advance the offset, retry next turn
+      return; // write failure: don't advance the offset, retry next turn
     }
   }
 

@@ -11,7 +11,8 @@
  * Fail-safe: never breaks Cursor (exit 0). Idempotent by ext_id.
  *
  * Register it in ~/.cursor/hooks.json (see hooks/cursor-hooks.example.json).
- * Env: DASH_API, CURSOR_API_KEY (optional),
+ * Writes straight to the local SQLite DB — no server to keep running.
+ * Env: DB_PATH (SQLite file), CURSOR_API_KEY (optional),
  *      CURSOR_LOOKBACK_MIN (default 30), CURSOR_THROTTLE_S (default 120),
  *      DASH_STATE (default ~/.cursor/dash-state)
  */
@@ -21,21 +22,16 @@ import { homedir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { fetchTokenEvents, fetchDailyProductivity } from "../lib/cursor-api.mjs";
 import { extractTaskId } from "../lib/task.mjs";
+import { insertEvents } from "../lib/db.mjs";
 
-const API = process.env.DASH_API ?? "http://localhost:8787/events";
 const CURSOR_KEY = process.env.CURSOR_API_KEY;
 const LOOKBACK = Number(process.env.CURSOR_LOOKBACK_MIN ?? 30) * 60_000;
 const THROTTLE = Number(process.env.CURSOR_THROTTLE_S ?? 120) * 1000;
 const STATE_DIR = process.env.DASH_STATE ?? join(homedir(), ".cursor", "dash-state");
 
-async function postEvents(events) {
+function saveEvents(events) {
   if (!events.length) return;
-  await fetch(API, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(events),
-    signal: AbortSignal.timeout(6000),
-  });
+  insertEvents(events);
 }
 
 async function pull(h) {
@@ -50,9 +46,9 @@ async function pull(h) {
   const endDate = Date.now();
   const startDate = endDate - LOOKBACK;
   const tokens = await fetchTokenEvents(CURSOR_KEY, startDate, endDate, h.user_email ?? null);
-  await postEvents(tokens);
+  saveEvents(tokens);
   const prod = await fetchDailyProductivity(CURSOR_KEY, startDate, endDate);
-  await postEvents(prod);
+  saveEvents(prod);
   writeFileSync(tsFile, String(Date.now()));
 }
 
@@ -80,7 +76,7 @@ async function main() {
 
   // 1) turn activity (event="stop", doesn't pollute the token sum)
   try {
-    await postEvents([
+    saveEvents([
       {
         source: "cursor",
         session_id: h.conversation_id ?? "unknown",

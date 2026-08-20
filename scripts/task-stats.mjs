@@ -6,27 +6,14 @@
  *   node task-stats.mjs            → stats for the ACTIVE task of the current session
  *                                    (most recent task state file)
  *
- * Env: DASH_API (default http://localhost:8787/events), DASH_STATE.
+ * Reads the local SQLite DB directly — no server needed.
+ * Env: DB_PATH (SQLite file), DASH_STATE.
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { taskStats } from "../lib/db.mjs";
 
-// Config: env takes priority; otherwise reads ~/.claude/dash-state/config.json.
-function fileConfig() {
-  try {
-    return JSON.parse(
-      readFileSync(join(homedir(), ".claude", "dash-state", "config.json"), "utf8")
-    );
-  } catch {
-    return {};
-  }
-}
-const CFG = fileConfig();
-const API_BASE = (process.env.DASH_API ?? CFG.api ?? "http://localhost:8787/events").replace(
-  /\/events\/?$/,
-  ""
-);
 const STATE_DIR = process.env.DASH_STATE ?? join(homedir(), ".claude", "dash-state");
 
 function activeTask() {
@@ -68,16 +55,9 @@ async function main() {
 
   let data;
   try {
-    const res = await fetch(`${API_BASE}/stats/task?id=${encodeURIComponent(id)}`, {
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) {
-      console.log(`Query failed (${res.status}). Is the API at ${API_BASE} up?`);
-      return;
-    }
-    data = await res.json();
+    data = taskStats(id);
   } catch (e) {
-    console.log(`Could not reach the API at ${API_BASE}: ${e.message}`);
+    console.log(`Could not read the metrics DB: ${e.message}`);
     return;
   }
 

@@ -1,19 +1,21 @@
 # AI Usage Dash
 
 Dashboard of AI usage metrics at work, focused on **exact (billed) tokens**,
-collected **automatically by hooks during the session** — you don't run any collector.
+collected **automatically by hooks during the session** — you don't run any collector,
+**and there is no server to keep running.**
 
 Three independent layers:
 
-1. **Collection (via hooks)** — end-of-turn hooks send the exact usage to the API on their own.
-2. **Ingestion + storage** — a Hono API receives at `POST /events` and writes to SQLite (`node:sqlite`, no native dependency).
-3. **Query/analysis** — a read-only MCP server that Claude and Cursor consume to generate charts (artifacts / canvas).
+1. **Collection (via hooks)** — end-of-turn hooks write the exact usage **straight to the local SQLite file** ([lib/db.mjs](lib/db.mjs)). No daemon, no HTTP.
+2. **Storage** — a single SQLite file (`metrics.db`) via Node's built-in `node:sqlite` (no native dependency, no build step). WAL + `busy_timeout` let concurrent hook writers and the MCP reader share it safely.
+3. **Query/analysis** — a read-only MCP server (stdio, spawned on demand by the client) that Claude and Cursor consume to generate charts (artifacts / canvas).
 
 The event contract ([src/types.ts](src/types.ts)) ties the three layers together. Tokens are first-class fields.
 
 ## How the exact token arrives, automatically
 
-Runs **100% local** on your machine — the API has no authentication; the hooks just `POST` to `localhost`.
+Runs **100% local** on your machine — the hooks are short-lived `node` processes that open
+the SQLite file, write the turn's events, and exit. Nothing listens on a port.
 
 | Client | Hook | What it does | Requires |
 |--------|------|--------------|----------|
@@ -32,19 +34,15 @@ npm install                 # no native build — uses Node's built-in SQLite
 cp .env.example .env
 ```
 
-### 1. Start the API
+There is **no service to start**. The hooks write to the DB directly and the MCP server is
+spawned on demand by your client. Optionally point everything at a specific DB file (default
+is `metrics.db` at the repo root) in your shell (e.g. `~/.zshrc`):
 
 ```bash
-npm run start:api           # http://localhost:8787  (runs locally, no auth)
+export DB_PATH=/Users/flaviozantut/Code/AI/dash/metrics.db
 ```
 
-### 2. Enable the Claude Code hook
-
-Optionally, if the API isn't on the default port, point the hook at it in your shell (e.g. `~/.zshrc`):
-
-```bash
-export DASH_API=http://localhost:8787/events
-```
+### 1. Enable the Claude Code hook
 
 Register the hook in `~/.claude/settings.json` (absolute path):
 
@@ -61,10 +59,10 @@ Register the hook in `~/.claude/settings.json` (absolute path):
 }
 ```
 
-Done — from then on, every Claude Code turn sends the exact usage on its own. The hook is
-silent and never blocks Claude Code, even when the API is down.
+Done — from then on, every Claude Code turn writes the exact usage on its own. The hook is
+silent and never blocks Claude Code; if a write ever fails it just retries next turn.
 
-### 3. Enable the Cursor hook
+### 2. Enable the Cursor hook
 
 Create `~/.cursor/hooks.json` (or `<project>/.cursor/hooks.json`) — see the example at
 [hooks/cursor-hooks.example.json](hooks/cursor-hooks.example.json):
@@ -80,7 +78,7 @@ For Cursor's **exact tokens**, also export the admin key
 export CURSOR_API_KEY=<cursor-admin-key>
 ```
 
-### 4. Register the read-only MCP (Claude / Cursor)
+### 3. Register the read-only MCP (Claude / Cursor)
 
 ```bash
 claude mcp add ai-usage -- npx tsx /Users/flaviozantut/Code/AI/dash/src/mcp.ts
@@ -144,10 +142,10 @@ Query a task's stats straight from Claude Code:
 Returns tokens (in/out/cache), messages, tool calls + error rate,
 p50/p95 latency, per-model breakdown and top tools — all for that issue.
 
-Pieces: [scripts/task-stats.mjs](scripts/task-stats.mjs) (resolves the task and queries the
-API's `GET /stats/task` endpoint) + the command in `~/.claude/commands/dash_stats.md`.
-Config (the API URL) can live in `~/.claude/dash-state/config.json` — or use the default
-`http://localhost:8787`. The active task is the session's most recent task state.
+Pieces: [scripts/task-stats.mjs](scripts/task-stats.mjs) (resolves the task and reads the
+local SQLite DB directly via `taskStats()` in [lib/db.mjs](lib/db.mjs)) + the command in
+`~/.claude/commands/dash_stats.md`. Point it at a non-default DB with `DB_PATH`.
+The active task is the session's most recent task state.
 
 ## History backfill (optional, runs once)
 
@@ -164,5 +162,5 @@ Both are idempotent (dedup by `ext_id`) — running them again doesn't duplicate
 
 - Claude Code cost (tokens × per-model price table).
 - Fixed dashboards (HTML) beyond the on-demand artifacts.
-- Migrate SQLite → Postgres (swap only [src/db.ts](src/db.ts)).
-- Auth / multi-tenant — **only** if it ever stops being local (today it runs single-user on the machine, no auth).
+- Migrate SQLite → Postgres (swap only [lib/db.mjs](lib/db.mjs)).
+- Multi-machine collection — if the DB ever needs to live off-box, reintroduce a thin ingest endpoint in front of `insertEvents()` (today it runs single-user on the machine, direct to file).

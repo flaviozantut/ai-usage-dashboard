@@ -1,20 +1,17 @@
 {
   "name": "ai-usage-dash",
   "version": "0.1.0",
-  "description": "Dashboard of AI usage metrics at work — collection via hooks/MCP, ingestion in an API, querying via MCP",
+  "description": "Dashboard of AI usage metrics at work — collection via hooks writing directly to a local SQLite DB, querying via MCP. No server.",
   "type": "module",
   "scripts": {
-    "dev:api": "tsx watch src/ingest.ts",
-    "start:api": "tsx src/ingest.ts",
     "mcp": "tsx src/mcp.ts",
+    "stats": "node scripts/task-stats.mjs",
     "collect:claude": "node collectors/claude-code.mjs",
     "collect:cursor": "node collectors/cursor.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@hono/node-server": "^1.13.7",
     "@modelcontextprotocol/sdk": "^1.0.4",
-    "hono": "^4.6.14",
     "zod": "^3.24.1"
   },
   "devDependencies": {

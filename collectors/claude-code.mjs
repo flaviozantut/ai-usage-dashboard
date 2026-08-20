@@ -4,7 +4,9 @@
  * stop_reason + latency. Scans ~/.claude/projects/**.jsonl and uses the same parser as
  * the hook (lib/claude-transcript.mjs). Idempotent by ext_id.
  *
- * Env: DASH_API, CLAUDE_DIR (default ~/.claude/projects)
+ * Writes straight to the local SQLite DB — no server needed.
+ *
+ * Env: DB_PATH (SQLite file), CLAUDE_DIR (default ~/.claude/projects)
  */
 import { readdir } from "node:fs/promises";
 import { createReadStream } from "node:fs";
@@ -12,8 +14,8 @@ import { createInterface } from "node:readline";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { extractEvents } from "../lib/claude-transcript.mjs";
+import { insertEvents } from "../lib/db.mjs";
 
-const API = process.env.DASH_API ?? "http://localhost:8787/events";
 const ROOT = process.env.CLAUDE_DIR ?? join(homedir(), ".claude", "projects");
 const BATCH = 500;
 
@@ -31,14 +33,8 @@ async function* jsonlFiles(dir) {
   }
 }
 
-async function post(batch) {
-  const res = await fetch(API, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(batch),
-  });
-  if (!res.ok) throw new Error(`POST ${res.status}: ${await res.text()}`);
-  return (await res.json()).inserted;
+function post(batch) {
+  return insertEvents(batch);
 }
 
 let sent = 0,
