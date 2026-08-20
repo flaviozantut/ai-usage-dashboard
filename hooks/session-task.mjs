@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Hook SessionStart — resolve a TAREFA (Jira/issue) da sessão.
+ * SessionStart hook — resolves the session's TASK (Jira/issue).
  *
- * Ordem de precisão: arquivo .dash-task no repo → branch git → (nada) pergunta ao usuário.
- * Quando resolve, grava o estado sessão→tarefa. Quando não resolve com precisão, injeta
- * contexto instruindo o Claude a pedir o ID ao usuário antes de prosseguir.
+ * Precedence order: .dash-task file in the repo → git branch → (nothing) ask the user.
+ * When it resolves, it writes the session→task state. When it can't resolve precisely, it
+ * injects context instructing Claude to ask the user for the ID before proceeding.
  *
- * Registre no ~/.claude/settings.json em SessionStart.
+ * Register it in ~/.claude/settings.json under SessionStart.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -33,10 +33,10 @@ async function main() {
   const sid = h.session_id ?? "unknown";
   const cwd = h.cwd ?? process.cwd();
 
-  // já resolvida nesta sessão? não faz nada.
+  // already resolved in this session? do nothing.
   if (getTask(sid)) return;
 
-  // 1) override explícito no repo
+  // 1) explicit override in the repo
   try {
     const t = readFileSync(join(cwd, ".dash-task"), "utf8").trim();
     const id = extractTaskId(t) ?? (t ? t.split(/\s+/)[0] : null);
@@ -46,7 +46,7 @@ async function main() {
     }
   } catch {}
 
-  // 2) branch git
+  // 2) git branch
   let branch = "";
   try {
     branch = execFileSync("git", ["-C", cwd, "rev-parse", "--abbrev-ref", "HEAD"], {
@@ -61,7 +61,7 @@ async function main() {
     return emit(`📋 Métricas desta sessão vinculadas à tarefa **${fromBranch}** (detectada no branch \`${branch}\`).`);
   }
 
-  // 3) não identificado com precisão → pedir ao usuário
+  // 3) not identified precisely → ask the user
   emit(
     `📋 Rastreamento de tarefa: não foi possível identificar com precisão a qual tarefa ` +
       `(Jira/issue) esta sessão se refere` +

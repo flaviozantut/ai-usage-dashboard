@@ -6,7 +6,7 @@ import type { Event } from "./types.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DB_PATH = process.env.DB_PATH ?? join(__dirname, "..", "metrics.db");
 
-// SQLite embutido do Node (>=22.5). Sem dependência nativa, sem build-scripts.
+// Node's built-in SQLite (>=22.5). No native dependency, no build scripts.
 export const db = new DatabaseSync(DB_PATH);
 db.exec("PRAGMA journal_mode = WAL");
 
@@ -36,7 +36,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_events_project ON events(project);
   CREATE INDEX IF NOT EXISTS idx_events_task    ON events(task_id);
   CREATE INDEX IF NOT EXISTS idx_events_model   ON events(model);
-  -- Idempotência: (source, ext_id) único quando ext_id existe. Re-scan não duplica.
+  -- Idempotency: (source, ext_id) unique when ext_id exists. A re-scan never duplicates.
   CREATE UNIQUE INDEX IF NOT EXISTS idx_events_extid ON events(source, ext_id) WHERE ext_id IS NOT NULL;
 `);
 
@@ -49,7 +49,7 @@ const insertStmt = db.prepare(`
      :tokens_in, :tokens_out, :cache_read, :cache_write, :cost_usd, :ext_id, :meta)
 `);
 
-/** Insere eventos numa transação; retorna quantos foram gravados (ignora duplicados por ext_id). */
+/** Inserts events in a transaction; returns how many were written (ignores ext_id duplicates). */
 export function insertEvents(events: Event[]): number {
   let inserted = 0;
   db.exec("BEGIN");
@@ -83,7 +83,7 @@ export function insertEvents(events: Event[]): number {
   return inserted;
 }
 
-/** Estatísticas consolidadas de uma tarefa/issue (para /dash_stats). */
+/** Consolidated stats for a task/issue (used by /dash_stats). */
 export function taskStats(taskId: string) {
   const summary = db
     .prepare(

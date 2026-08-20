@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Hook do Claude Code — TOKENS EXATOS + ferramentas + stop_reason + latência.
- * Automático no Stop/SubagentStop, sem coletor manual.
+ * Claude Code hook — EXACT TOKENS + tools + stop_reason + latency.
+ * Automatic on Stop/SubagentStop, no manual collector.
  *
- * Faz o "tail" do transcript (só o que cresceu, via estado por arquivo) e usa o parser
- * compartilhado lib/claude-transcript.mjs pra extrair message/tool_use/error de cada turno.
+ * Tails the transcript (only what grew, via per-file state) and uses the shared parser
+ * lib/claude-transcript.mjs to extract message/tool_use/error from each turn.
  *
- * À prova de falha: nunca bloqueia o Claude Code (exit 0). Idempotente por ext_id.
+ * Fail-safe: never blocks Claude Code (exit 0). Idempotent by ext_id.
  *
  * Env: DASH_API, DASH_STATE (dir; default ~/.claude/dash-state)
  */
@@ -48,8 +48,8 @@ async function main() {
     state = JSON.parse(readFileSync(stateFile, "utf8"));
   } catch {}
   let offset = state.off ?? 0;
-  if (offset > size) offset = 0; // arquivo trocado/truncado
-  if (offset === size) return; // nada novo
+  if (offset > size) offset = 0; // file replaced/truncated
+  if (offset === size) return; // nothing new
 
   const len = size - offset;
   const buf = Buffer.alloc(len);
@@ -58,7 +58,7 @@ async function main() {
   closeSync(fd);
   const text = buf.toString("utf8");
 
-  // só linhas completas (terminadas em \n)
+  // only complete lines (terminated by \n)
   const parts = text.split("\n");
   const complete = parts.slice(0, -1);
   let consumed = 0;
@@ -86,7 +86,7 @@ async function main() {
         signal: AbortSignal.timeout(3000),
       });
     } catch {
-      return; // falha de rede: não avança o offset, tenta no próximo turno
+      return; // network failure: don't advance the offset, retry next turn
     }
   }
 

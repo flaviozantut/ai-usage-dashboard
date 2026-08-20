@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Backfill do Claude Code (roda uma vez, opcional) — TOKENS EXATOS + ferramentas +
- * stop_reason + latência. Varre ~/.claude/projects/**.jsonl e usa o mesmo parser do hook
- * (lib/claude-transcript.mjs). Idempotente por ext_id.
+ * Claude Code backfill (runs once, optional) — EXACT TOKENS + tools +
+ * stop_reason + latency. Scans ~/.claude/projects/**.jsonl and uses the same parser as
+ * the hook (lib/claude-transcript.mjs). Idempotent by ext_id.
  *
  * Env: DASH_API, CLAUDE_DIR (default ~/.claude/projects)
  */
@@ -54,7 +54,7 @@ for await (const file of jsonlFiles(ROOT)) {
       objs.push(JSON.parse(line));
     } catch {}
   }
-  // latência dentro do arquivo (prevTs recomeça por arquivo/sessão)
+  // latency within the file (prevTs restarts per file/session)
   const { events } = extractEvents(objs, { prevTs: null });
   for (const ev of events) {
     batch.push(ev);
@@ -70,4 +70,4 @@ if (batch.length) {
   sent += batch.length;
 }
 
-console.log(`claude-code backfill: ${sent} eventos enviados, ${inserted} novos gravados.`);
+console.log(`claude-code backfill: ${sent} events sent, ${inserted} new ones written.`);

@@ -1,7 +1,7 @@
 {
   "name": "ai-usage-dash",
   "version": "0.1.0",
-  "description": "Dashboard de métricas de uso de IA no trabalho — coleta via hooks/MCP, ingestão em API, consulta via MCP",
+  "description": "Dashboard of AI usage metrics at work — collection via hooks/MCP, ingestion in an API, querying via MCP",
   "type": "module",
   "scripts": {
     "dev:api": "tsx watch src/ingest.ts",

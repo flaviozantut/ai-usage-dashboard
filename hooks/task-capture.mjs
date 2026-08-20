@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * Hook UserPromptSubmit — captura o ID da tarefa a partir do prompt do usuário.
+ * UserPromptSubmit hook — captures the task ID from the user's prompt.
  *
- *   - "#task PROJ-123" / "task: PROJ-123"  → define/corrige sempre (prioridade)
- *   - PROJ-123 mencionado no prompt         → define se a sessão ainda não tem tarefa
+ *   - "#task PROJ-123" / "task: PROJ-123"  → always sets/corrects it (priority)
+ *   - PROJ-123 mentioned in the prompt      → sets it if the session has no task yet
  *
- * Assim, quando o SessionStart pediu o ID e o usuário responde, a tarefa é vinculada
- * sozinha, sem passo manual.
+ * This way, when SessionStart asked for the ID and the user replies, the task is linked
+ * automatically, with no manual step.
  *
- * Registre no ~/.claude/settings.json em UserPromptSubmit.
+ * Register it in ~/.claude/settings.json under UserPromptSubmit.
  */
 import { extractTaskId, extractExplicitTask } from "../lib/task.mjs";
 import { getTask, setTask } from "../lib/task-state.mjs";

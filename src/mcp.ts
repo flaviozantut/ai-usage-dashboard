@@ -4,17 +4,17 @@ import { z } from "zod";
 import { db } from "./db.js";
 
 /**
- * MCP server de LEITURA. Claude e Cursor chamam estas tools e recebem JSON limpo
- * pronto para virar gráfico (artifact no Claude, canvas no Cursor).
- * Nunca falam com o banco diretamente.
+ * READ-ONLY MCP server. Claude and Cursor call these tools and get back clean JSON
+ * ready to become a chart (artifact in Claude, canvas in Cursor).
+ * They never talk to the database directly.
  */
 const server = new McpServer({ name: "ai-usage-metrics", version: "0.1.0" });
 
-// Janela de tempo reutilizada por todas as tools.
+// Time window reused by every tool.
 const period = z
   .enum(["24h", "7d", "30d", "all"])
   .default("7d")
-  .describe("Janela de tempo da consulta");
+  .describe("Time window of the query");
 
 function sinceClause(p: string): string {
   const map: Record<string, string> = {
@@ -27,13 +27,13 @@ function sinceClause(p: string): string {
 
 server.tool(
   "query_usage",
-  "Contagem de eventos ao longo do tempo, agrupável por dia/usuário/projeto/ferramenta/fonte.",
+  "Event counts over time, groupable by day/user/project/tool/source.",
   {
     period,
     group_by: z
       .enum(["day", "user", "project", "task_id", "tool", "source", "event"])
       .default("day"),
-    user: z.string().optional().describe("Filtra por um usuário"),
+    user: z.string().optional().describe("Filter by a single user"),
   },
   async ({ period, group_by, user }) => {
     const col = group_by === "day" ? "date(ts)" : group_by;
@@ -56,7 +56,7 @@ server.tool(
 
 server.tool(
   "top_tools",
-  "Ferramentas mais usadas (event = tool_use) na janela.",
+  "Most-used tools (event = tool_use) in the window.",
   { period, limit: z.number().int().min(1).max(50).default(10) },
   async ({ period, limit }) => {
     const rows = db
@@ -73,7 +73,7 @@ server.tool(
 
 server.tool(
   "sessions_summary",
-  "Resumo por sessão: nº de eventos, ferramentas, primeiro/último evento, duração.",
+  "Per-session summary: event count, tools, first/last event, duration.",
   { period, limit: z.number().int().min(1).max(200).default(50) },
   async ({ period, limit }) => {
     const rows = db
@@ -93,7 +93,7 @@ server.tool(
 
 server.tool(
   "token_usage",
-  "Soma de tokens EXATOS (in/out/cache) e custo, agrupável por dia/modelo/fonte/usuário/projeto.",
+  "Sum of EXACT tokens (in/out/cache) and cost, groupable by day/model/source/user/project.",
   {
     period,
     group_by: z
@@ -129,7 +129,7 @@ server.tool(
 
 server.tool(
   "latency_stats",
-  "Latência por turno (ms entre o gatilho e a resposta): média, p50, p95, máx — por dia ou modelo.",
+  "Per-turn latency (ms between trigger and response): avg, p50, p95, max — by day or model.",
   { period, group_by: z.enum(["day", "model"]).default("day") },
   async ({ period, group_by }) => {
     const col = group_by === "day" ? "date(ts)" : "model";
@@ -160,7 +160,7 @@ server.tool(
 
 server.tool(
   "tool_stats",
-  "Ferramentas mais usadas + taxa de erro (erros/uso) + chamadas de web search/fetch, na janela.",
+  "Most-used tools + error rate (errors/use) + web search/fetch calls, in the window.",
   { period, limit: z.number().int().min(1).max(50).default(15) },
   async ({ period, limit }) => {
     const tools = db
@@ -190,7 +190,7 @@ server.tool(
 
 server.tool(
   "stop_reasons",
-  "Distribuição de stop_reason dos turnos (end_turn, tool_use, max_tokens, refusal) — sinaliza cortes e recusas.",
+  "Distribution of turn stop_reason (end_turn, tool_use, max_tokens, refusal) — flags truncations and refusals.",
   { period },
   async ({ period }) => {
     const rows = db
@@ -206,7 +206,7 @@ server.tool(
 
 server.tool(
   "productivity",
-  "Cursor: accept rate de código e de tabs, linhas aceitas/rejeitadas, por dia ou usuário.",
+  "Cursor: code and tab accept rate, accepted/rejected lines, by day or user.",
   { period, group_by: z.enum(["day", "user"]).default("day") },
   async ({ period, group_by }) => {
     const col = group_by === "day" ? "json_extract(meta,'$.day')" : "json_extract(meta,'$.email')";
@@ -234,7 +234,7 @@ server.tool(
 
 server.tool(
   "by_task",
-  "Esforço de IA por tarefa/issue (Jira etc.): tokens, mensagens, ferramentas, erros e sessões.",
+  "AI effort per task/issue (Jira etc.): tokens, messages, tools, errors and sessions.",
   { period, limit: z.number().int().min(1).max(100).default(30) },
   async ({ period, limit }) => {
     const rows = db

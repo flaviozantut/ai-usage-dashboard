@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 /**
- * Hook do Cursor (evento `stop`) — automático, sem coletor manual.
+ * Cursor hook (`stop` event) — automatic, no manual collector.
  *
- * O payload do Cursor não traz tokens. Então:
- *   1) SEMPRE registra a atividade do turno na hora (event="stop").
- *   2) SE houver CURSOR_API_KEY, dispara (com throttle) um pull da Admin API que preenche:
- *        - tokens EXATOS (filtered-usage-events)  → eventos "message"
- *        - produtividade diária (daily-usage-data) → eventos "productivity" (accept rate)
+ * The Cursor payload doesn't carry tokens. So:
+ *   1) ALWAYS record the turn's activity right away (event="stop").
+ *   2) IF CURSOR_API_KEY is set, fire (throttled) an Admin API pull that fills in:
+ *        - EXACT tokens (filtered-usage-events)  → "message" events
+ *        - daily productivity (daily-usage-data)  → "productivity" events (accept rate)
  *
- * À prova de falha: nunca quebra o Cursor (exit 0). Idempotente por ext_id.
+ * Fail-safe: never breaks Cursor (exit 0). Idempotent by ext_id.
  *
- * Registre em ~/.cursor/hooks.json (veja hooks/cursor-hooks.example.json).
- * Env: DASH_API, CURSOR_API_KEY (opcional),
+ * Register it in ~/.cursor/hooks.json (see hooks/cursor-hooks.example.json).
+ * Env: DASH_API, CURSOR_API_KEY (optional),
  *      CURSOR_LOOKBACK_MIN (default 30), CURSOR_THROTTLE_S (default 120),
  *      DASH_STATE (default ~/.cursor/dash-state)
  */
@@ -64,7 +64,7 @@ async function main() {
     h = JSON.parse(raw);
   } catch {}
 
-  // task_id a partir do branch git do workspace
+  // task_id from the workspace's git branch
   const root = Array.isArray(h.workspace_roots) ? h.workspace_roots[0] : null;
   let task_id;
   if (root) {
@@ -78,7 +78,7 @@ async function main() {
     } catch {}
   }
 
-  // 1) atividade do turno (event="stop", não polui a soma de tokens)
+  // 1) turn activity (event="stop", doesn't pollute the token sum)
   try {
     await postEvents([
       {
@@ -95,7 +95,7 @@ async function main() {
     ]);
   } catch {}
 
-  // 2) tokens exatos + produtividade via Admin API
+  // 2) exact tokens + productivity via Admin API
   if (CURSOR_KEY) {
     try {
       await pull(h);

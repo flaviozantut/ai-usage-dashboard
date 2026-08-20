@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Backfill do Cursor via Admin API — tokens exatos + produtividade (accept rate).
- * Requer plano Team/Business e admin key. Idempotente por ext_id.
+ * Cursor backfill via Admin API — exact tokens + productivity (accept rate).
+ * Requires a Team/Business plan and an admin key. Idempotent by ext_id.
  *
- * Env: DASH_API, CURSOR_API_KEY (obrigatório), CURSOR_DAYS (default 30)
+ * Env: DASH_API, CURSOR_API_KEY (required), CURSOR_DAYS (default 30)
  */
 import { fetchTokenEvents, fetchDailyProductivity } from "../lib/cursor-api.mjs";
 
@@ -12,7 +12,7 @@ const CURSOR_KEY = process.env.CURSOR_API_KEY;
 const DAYS = Number(process.env.CURSOR_DAYS ?? 30);
 
 if (!CURSOR_KEY) {
-  console.error("Defina CURSOR_API_KEY.");
+  console.error("Set CURSOR_API_KEY.");
   process.exit(1);
 }
 
@@ -36,6 +36,6 @@ const prodEvents = await fetchDailyProductivity(CURSOR_KEY, startDate, endDate);
 const insProd = await post(prodEvents);
 
 console.log(
-  `cursor backfill: tokens ${tokenEvents.length} lidos/${insTok} novos · ` +
-    `produtividade ${prodEvents.length} dias/${insProd} novos.`
+  `cursor backfill: tokens ${tokenEvents.length} read/${insTok} new · ` +
+    `productivity ${prodEvents.length} days/${insProd} new.`
 );

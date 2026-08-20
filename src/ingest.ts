@@ -7,7 +7,7 @@ const app = new Hono();
 
 app.get("/health", (c) => c.json({ ok: true }));
 
-// Estatísticas de uma tarefa (para /dash_stats). App local, sem auth.
+// Stats for a task (used by /dash_stats). Local app, no auth.
 app.get("/stats/task", (c) => {
   const id = c.req.query("id");
   if (!id) return c.json({ error: "missing id" }, 400);
@@ -15,7 +15,7 @@ app.get("/stats/task", (c) => {
 });
 
 /**
- * Ingestão. App local, sem auth — o `user` vem do próprio payload.
+ * Ingestion. Local app, no auth — `user` comes from the payload itself.
  */
 app.post("/events", async (c) => {
   let body: unknown;
@@ -38,4 +38,4 @@ app.post("/events", async (c) => {
 
 const port = Number(process.env.PORT ?? 8787);
 serve({ fetch: app.fetch, port });
-console.log(`[ingest] ouvindo em http://localhost:${port}`);
+console.log(`[ingest] listening on http://localhost:${port}`);

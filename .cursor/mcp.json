@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "ai-usage": {
+      "command": "npm",
+      "args": ["run", "mcp"],
+      "cwd": "/Users/flaviozantut/Code/AI/dash",
+      "env": {
+        "DB_PATH": "/Users/flaviozantut/Code/AI/dash/metrics.db"
+      }
+    }
+  }
+}

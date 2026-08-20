@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * Estatísticas de uma tarefa — usado pelo slash command /dash_stats.
+ * Stats for a task — used by the /dash_stats slash command.
  *
- *   node task-stats.mjs DEMO-100   → stats da tarefa informada
- *   node task-stats.mjs            → stats da tarefa ATIVA da sessão atual
- *                                    (arquivo de estado de tarefa mais recente)
+ *   node task-stats.mjs DEMO-100   → stats for the given task
+ *   node task-stats.mjs            → stats for the ACTIVE task of the current session
+ *                                    (most recent task state file)
  *
  * Env: DASH_API (default http://localhost:8787/events), DASH_STATE.
  */
@@ -12,7 +12,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
-// Config: env tem prioridade; senão lê ~/.claude/dash-state/config.json.
+// Config: env takes priority; otherwise reads ~/.claude/dash-state/config.json.
 function fileConfig() {
   try {
     return JSON.parse(

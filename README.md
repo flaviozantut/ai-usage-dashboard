@@ -1,52 +1,52 @@
 # AI Usage Dash
 
-Dashboard de métricas de uso de IA no trabalho, com foco em **tokens exatos** (faturados),
-coletados **automaticamente por hooks durante a sessão** — você não roda coletor nenhum.
+Dashboard of AI usage metrics at work, focused on **exact (billed) tokens**,
+collected **automatically by hooks during the session** — you don't run any collector.
 
-Três camadas independentes:
+Three independent layers:
 
-1. **Coleta (via hooks)** — hooks de fim de turno enviam o uso exato pra API, sozinhos.
-2. **Ingestão + storage** — API Hono recebe em `POST /events`, grava em SQLite (`node:sqlite`, sem dependência nativa).
-3. **Consulta/análise** — MCP server de leitura que Claude e Cursor consomem para gerar gráficos (artifacts / canvas).
+1. **Collection (via hooks)** — end-of-turn hooks send the exact usage to the API on their own.
+2. **Ingestion + storage** — a Hono API receives at `POST /events` and writes to SQLite (`node:sqlite`, no native dependency).
+3. **Query/analysis** — a read-only MCP server that Claude and Cursor consume to generate charts (artifacts / canvas).
 
-O contrato do evento ([src/types.ts](src/types.ts)) amarra as três camadas. Tokens são campos de primeira classe.
+The event contract ([src/types.ts](src/types.ts)) ties the three layers together. Tokens are first-class fields.
 
-## Como o token exato chega, automaticamente
+## How the exact token arrives, automatically
 
-Roda **100% local** na sua máquina — a API não tem autenticação; os hooks apenas fazem `POST` no `localhost`.
+Runs **100% local** on your machine — the API has no authentication; the hooks just `POST` to `localhost`.
 
-| Cliente | Hook | O que faz | Precisa de |
-|---------|------|-----------|-----------|
-| **Claude Code** | `Stop` → [hooks/claude-code-hook.mjs](hooks/claude-code-hook.mjs) | Lê `transcript_path` a cada turno, faz "tail" do transcript e extrai `message.usage` (in/out/cache **exatos**) | nada — 100% local |
-| **Cursor** | `stop` → [hooks/cursor-hook.mjs](hooks/cursor-hook.mjs) | (1) registra a atividade do turno na hora; (2) com admin key, puxa os tokens exatos da Admin API | `CURSOR_API_KEY` p/ tokens exatos |
+| Client | Hook | What it does | Requires |
+|--------|------|--------------|----------|
+| **Claude Code** | `Stop` → [hooks/claude-code-hook.mjs](hooks/claude-code-hook.mjs) | Reads `transcript_path` each turn, tails the transcript and extracts `message.usage` (**exact** in/out/cache) | nothing — 100% local |
+| **Cursor** | `stop` → [hooks/cursor-hook.mjs](hooks/cursor-hook.mjs) | (1) records the turn's activity right away; (2) with an admin key, pulls the exact tokens from the Admin API | `CURSOR_API_KEY` for exact tokens |
 
-> ⚠️ **Por que o Cursor precisa de API key.** O token faturado do Cursor **não existe na máquina**:
-> o hook do Cursor não recebe tokens, e o DB local só tem *estimativas* de contexto. O número
-> exato só existe server-side (Admin API, plano Team/Business). O hook automatiza esse pull —
-> você continua não rodando nada — mas sem a admin key só dá pra ver *atividade*, não os tokens.
+> ⚠️ **Why Cursor needs an API key.** Cursor's billed token count **doesn't exist on the machine**:
+> the Cursor hook receives no tokens, and the local DB only has context *estimates*. The exact
+> number only exists server-side (Admin API, Team/Business plan). The hook automates that pull —
+> you still run nothing — but without the admin key you can only see *activity*, not the tokens.
 
 ## Setup
 
 ```bash
-npm install                 # sem build nativo — usa o SQLite embutido do Node
+npm install                 # no native build — uses Node's built-in SQLite
 cp .env.example .env
 ```
 
-### 1. Suba a API
+### 1. Start the API
 
 ```bash
-npm run start:api           # http://localhost:8787  (roda local, sem auth)
+npm run start:api           # http://localhost:8787  (runs locally, no auth)
 ```
 
-### 2. Ligue o hook do Claude Code
+### 2. Enable the Claude Code hook
 
-Opcionalmente, se a API não estiver na porta padrão, aponte o hook pra ela no seu shell (ex. `~/.zshrc`):
+Optionally, if the API isn't on the default port, point the hook at it in your shell (e.g. `~/.zshrc`):
 
 ```bash
 export DASH_API=http://localhost:8787/events
 ```
 
-Registre o hook no `~/.claude/settings.json` (caminho absoluto):
+Register the hook in `~/.claude/settings.json` (absolute path):
 
 ```json
 {
@@ -61,108 +61,108 @@ Registre o hook no `~/.claude/settings.json` (caminho absoluto):
 }
 ```
 
-Pronto — a partir daí, todo turno do Claude Code manda o uso exato sozinho. O hook é
-silencioso e nunca bloqueia o Claude Code, mesmo com a API fora.
+Done — from then on, every Claude Code turn sends the exact usage on its own. The hook is
+silent and never blocks Claude Code, even when the API is down.
 
-### 3. Ligue o hook do Cursor
+### 3. Enable the Cursor hook
 
-Crie `~/.cursor/hooks.json` (ou `<projeto>/.cursor/hooks.json`) — veja o exemplo em
+Create `~/.cursor/hooks.json` (or `<project>/.cursor/hooks.json`) — see the example at
 [hooks/cursor-hooks.example.json](hooks/cursor-hooks.example.json):
 
 ```json
 { "version": 1, "hooks": { "stop": [{ "command": "node /Users/flaviozantut/Code/AI/dash/hooks/cursor-hook.mjs" }] } }
 ```
 
-Para os **tokens exatos** do Cursor, exporte também a admin key
+For Cursor's **exact tokens**, also export the admin key
 (Cursor Dashboard → Settings → Cursor Admin API Keys):
 
 ```bash
-export CURSOR_API_KEY=<admin-key-do-cursor>
+export CURSOR_API_KEY=<cursor-admin-key>
 ```
 
-### 4. Registre o MCP de leitura (Claude / Cursor)
+### 4. Register the read-only MCP (Claude / Cursor)
 
 ```bash
 claude mcp add ai-usage -- npx tsx /Users/flaviozantut/Code/AI/dash/src/mcp.ts
 ```
 
-No cliente: *"use a tool `token_usage` (period 30d, group_by model) e faça um gráfico de barras"* → artifact/canvas.
+In the client: *"use the `token_usage` tool (period 30d, group_by model) and make a bar chart"* → artifact/canvas.
 
-## Tools de consulta (MCP)
+## Query tools (MCP)
 
-| Tool | O que retorna |
-|------|---------------|
-| `by_task` | **esforço de IA por tarefa/issue** (Jira etc.): tokens, mensagens, ferramentas, erros, sessões |
-| `token_usage` | **soma de tokens exatos** (in/out/cache) + custo, por dia/modelo/fonte/usuário/projeto/**tarefa** |
-| `latency_stats` | latência por turno: média, p50, **p95**, máx — por dia ou modelo |
-| `tool_stats` | ferramentas mais usadas + **taxa de erro** (erros/uso) + web search/fetch |
-| `stop_reasons` | distribuição de `stop_reason` (cortes por `max_tokens`, recusas) |
-| `productivity` | **Cursor**: accept rate de código e de tabs, linhas aceitas/rejeitadas |
-| `query_usage` | contagem de eventos por dia/usuário/projeto/ferramenta/fonte |
-| `top_tools` | ferramentas mais usadas |
-| `sessions_summary` | resumo por sessão com duração |
+| Tool | What it returns |
+|------|-----------------|
+| `by_task` | **AI effort per task/issue** (Jira etc.): tokens, messages, tools, errors, sessions |
+| `token_usage` | **sum of exact tokens** (in/out/cache) + cost, by day/model/source/user/project/**task** |
+| `latency_stats` | per-turn latency: avg, p50, **p95**, max — by day or model |
+| `tool_stats` | most-used tools + **error rate** (errors/use) + web search/fetch |
+| `stop_reasons` | distribution of `stop_reason` (`max_tokens` truncations, refusals) |
+| `productivity` | **Cursor**: code and tab accept rate, accepted/rejected lines |
+| `query_usage` | event counts by day/user/project/tool/source |
+| `top_tools` | most-used tools |
+| `sessions_summary` | per-session summary with duration |
 
-### Métricas capturadas por evento
+### Metrics captured per event
 
-- **`message`** (Claude Code e Curso): tokens exatos, `model`, e em `meta`: `stop_reason`,
-  `latency_ms` (tempo do turno), `n_tools`, `tools`, `web_search`/`web_fetch`, `gitBranch`.
-- **`tool_use`**: um por ferramenta chamada (alimenta `top_tools`/`tool_stats`).
-- **`error`**: um por `tool_result` com erro (denominador = `tool_use` → taxa de erro).
-- **`productivity`** (Cursor, diário): linhas add/aceitas, tabs mostradas/aceitas, applies.
+- **`message`** (Claude Code and Cursor): exact tokens, `model`, and in `meta`: `stop_reason`,
+  `latency_ms` (turn time), `n_tools`, `tools`, `web_search`/`web_fetch`, `gitBranch`.
+- **`tool_use`**: one per tool called (feeds `top_tools`/`tool_stats`).
+- **`error`**: one per `tool_result` with an error (denominator = `tool_use` → error rate).
+- **`productivity`** (Cursor, daily): lines added/accepted, tabs shown/accepted, applies.
 
-## Vínculo com tarefa (Jira/issue) por sessão
+## Task (Jira/issue) link per session
 
-Cada sessão de IA é vinculada a uma tarefa, para medir **esforço de IA por issue**. A
-resolução acontece automaticamente no início da sessão, por ordem de precisão:
+Each AI session is linked to a task, to measure **AI effort per issue**. Resolution
+happens automatically at the start of the session, in order of precision:
 
-1. **`.dash-task`** — arquivo no raiz do repo com o ID (override explícito).
-2. **Branch git** — ID estilo Jira no nome do branch (`feature/PROJ-123-...` → `PROJ-123`).
-3. **Prompt do usuário** — ID mencionado, ou marcador explícito `#task PROJ-123` (corrige a qualquer momento).
-4. **Se nada acima resolver com precisão** → o hook `SessionStart` injeta contexto e o
-   Claude **pergunta o ID ao usuário** antes de começar. A resposta é capturada sozinha.
+1. **`.dash-task`** — file at the repo root with the ID (explicit override).
+2. **Git branch** — a Jira-style ID in the branch name (`feature/PROJ-123-...` → `PROJ-123`).
+3. **User prompt** — an ID mentioned, or the explicit marker `#task PROJ-123` (correct it any time).
+4. **If none of the above resolves precisely** → the `SessionStart` hook injects context and
+   Claude **asks the user for the ID** before starting. The reply is captured on its own.
 
-Hooks envolvidos (registrados no `~/.claude/settings.json`):
+Hooks involved (registered in `~/.claude/settings.json`):
 
 ```json
 "SessionStart":    [{ "hooks": [{ "type": "command", "command": "node /ABS/hooks/session-task.mjs" }] }],
 "UserPromptSubmit":[{ "hooks": [{ "type": "command", "command": "node /ABS/hooks/task-capture.mjs" }] }]
 ```
 
-O padrão de ID é configurável via `DASH_TASK_PATTERN` (regex). O default é estilo Jira
-(`PROJ-123`). O `task_id` vira campo de primeira classe em todo evento; consulte com
-`by_task` ou `token_usage group_by=task_id`.
+The ID pattern is configurable via `DASH_TASK_PATTERN` (regex). The default is Jira-style
+(`PROJ-123`). `task_id` becomes a first-class field on every event; query it with
+`by_task` or `token_usage group_by=task_id`.
 
 ## Slash command `/dash_stats`
 
-Consulta as estatísticas de uma tarefa direto no Claude Code:
+Query a task's stats straight from Claude Code:
 
 ```
-/dash_stats DEMO-100   → estatísticas da tarefa informada
-/dash_stats            → usa a tarefa ATIVA da sessão atual
+/dash_stats DEMO-100   → stats for the given task
+/dash_stats            → uses the ACTIVE task of the current session
 ```
 
-Retorna tokens (in/out/cache), mensagens, chamadas de ferramenta + taxa de erro,
-latência p50/p95, quebra por modelo e top ferramentas — tudo daquela issue.
+Returns tokens (in/out/cache), messages, tool calls + error rate,
+p50/p95 latency, per-model breakdown and top tools — all for that issue.
 
-Peças: [scripts/task-stats.mjs](scripts/task-stats.mjs) (resolve a tarefa e consulta o
-endpoint `GET /stats/task` da API) + o comando em `~/.claude/commands/dash_stats.md`.
-A config (URL da API) pode ficar em `~/.claude/dash-state/config.json` — ou usar o default
-`http://localhost:8787`. A tarefa ativa é o estado de tarefa mais recente da sessão.
+Pieces: [scripts/task-stats.mjs](scripts/task-stats.mjs) (resolves the task and queries the
+API's `GET /stats/task` endpoint) + the command in `~/.claude/commands/dash_stats.md`.
+Config (the API URL) can live in `~/.claude/dash-state/config.json` — or use the default
+`http://localhost:8787`. The active task is the session's most recent task state.
 
-## Backfill do histórico (opcional, roda uma vez)
+## History backfill (optional, runs once)
 
-Os hooks capturam de agora em diante. Para importar TODO o histórico já existente uma única vez:
+The hooks capture from now on. To import ALL the existing history one single time:
 
 ```bash
-npm run collect:claude                       # varre ~/.claude/projects/**.jsonl
+npm run collect:claude                       # scans ~/.claude/projects/**.jsonl
 CURSOR_API_KEY=<key> npm run collect:cursor
 ```
 
-Ambos são idempotentes (dedup por `ext_id`) — rodar de novo não duplica.
+Both are idempotent (dedup by `ext_id`) — running them again doesn't duplicate.
 
-## Próximos passos
+## Next steps
 
-- Custo do Claude Code (tokens × tabela de preço por modelo).
-- Dashboards fixos (HTML) além dos artifacts sob demanda.
-- Migrar SQLite → Postgres (troque só [src/db.ts](src/db.ts)).
-- Auth / multi-tenant — **só** se um dia deixar de ser local (hoje roda single-user na máquina, sem autenticação).
+- Claude Code cost (tokens × per-model price table).
+- Fixed dashboards (HTML) beyond the on-demand artifacts.
+- Migrate SQLite → Postgres (swap only [src/db.ts](src/db.ts)).
+- Auth / multi-tenant — **only** if it ever stops being local (today it runs single-user on the machine, no auth).

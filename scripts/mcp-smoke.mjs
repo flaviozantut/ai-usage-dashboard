@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Driver de teste: fala o protocolo MCP (stdio JSON-RPC) com src/mcp.ts,
-// exatamente como Claude/Cursor fariam, e chama a tool token_usage.
+// Test driver: speaks the MCP protocol (stdio JSON-RPC) with src/mcp.ts,
+// exactly as Claude/Cursor would, and calls the token_usage tool.
 import { spawn } from "node:child_process";
 
 const srv = spawn("npx", ["tsx", "src/mcp.ts"], { stdio: ["pipe", "pipe", "inherit"] });
