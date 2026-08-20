@@ -48,20 +48,20 @@ function activeTask() {
   }
 }
 
-const fmt = (n) => (n ?? 0).toLocaleString("pt-BR");
+const fmt = (n) => (n ?? 0).toLocaleString("en-US");
 const compact = (n) =>
   n >= 1e9 ? (n / 1e9).toFixed(2) + " B" : n >= 1e6 ? (n / 1e6).toFixed(1) + " M" : n >= 1e3 ? (n / 1e3).toFixed(0) + " K" : String(n ?? 0);
 const secs = (ms) => (ms == null ? "—" : (ms / 1000).toFixed(1) + "s");
 
 async function main() {
   let id = process.argv[2];
-  let resolvedFrom = "argumento";
+  let resolvedFrom = "argument";
   if (!id) {
     id = activeTask();
-    resolvedFrom = "sessão ativa";
+    resolvedFrom = "active session";
   }
   if (!id) {
-    console.log("Nenhuma tarefa informada e nenhuma tarefa ativa encontrada nesta sessão.");
+    console.log("No task provided and no active task found in this session.");
     console.log("Use: /dash_stats PROJ-123");
     return;
   }
@@ -72,40 +72,40 @@ async function main() {
       signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) {
-      console.log(`Erro ao consultar (${res.status}). API em ${API_BASE} está no ar?`);
+      console.log(`Query failed (${res.status}). Is the API at ${API_BASE} up?`);
       return;
     }
     data = await res.json();
   } catch (e) {
-    console.log(`Não foi possível falar com a API em ${API_BASE}: ${e.message}`);
+    console.log(`Could not reach the API at ${API_BASE}: ${e.message}`);
     return;
   }
 
   const s = data.summary;
   if (!s || !s.messages) {
-    console.log(`📋 Tarefa ${id} (${resolvedFrom}): nenhum dado registrado ainda.`);
+    console.log(`📋 Task ${id} (${resolvedFrom}): no data recorded yet.`);
     return;
   }
   const tokensTotal = Number(s.tokens_total || 0);
-  const errRate = s.tool_uses ? ((s.errors / s.tool_uses) * 100).toFixed(1) : "0,0";
+  const errRate = s.tool_uses ? ((s.errors / s.tool_uses) * 100).toFixed(1) : "0.0";
 
   const L = [];
-  L.push(`📋 Estatísticas — tarefa ${id}  (via ${resolvedFrom})`);
-  L.push(`${String(s.first_seen).slice(0, 10)} → ${String(s.last_seen).slice(0, 10)}  ·  ${s.days_active} dia(s) ativo(s)  ·  ${s.sessions} sessão(ões)`);
+  L.push(`📋 Stats — task ${id}  (via ${resolvedFrom})`);
+  L.push(`${String(s.first_seen).slice(0, 10)} → ${String(s.last_seen).slice(0, 10)}  ·  ${s.days_active} active day(s)  ·  ${s.sessions} session(s)`);
   L.push("");
-  L.push(`Tokens totais ....... ${compact(tokensTotal)}  (${fmt(tokensTotal)})`);
+  L.push(`Total tokens ........ ${compact(tokensTotal)}  (${fmt(tokensTotal)})`);
   L.push(`  input ${fmt(s.tokens_in)} · output ${fmt(s.tokens_out)} · cache_read ${fmt(s.cache_read)} · cache_write ${fmt(s.cache_write)}`);
-  L.push(`Mensagens ........... ${fmt(s.messages)}`);
-  L.push(`Chamadas de tool .... ${fmt(s.tool_uses)}  ·  erros ${fmt(s.errors)} (${errRate}%)`);
-  L.push(`Latência ............ p50 ${secs(data.latency.p50_ms)} · p95 ${secs(data.latency.p95_ms)} · média ${secs(data.latency.avg_ms)}`);
+  L.push(`Messages ............ ${fmt(s.messages)}`);
+  L.push(`Tool calls .......... ${fmt(s.tool_uses)}  ·  errors ${fmt(s.errors)} (${errRate}%)`);
+  L.push(`Latency ............. p50 ${secs(data.latency.p50_ms)} · p95 ${secs(data.latency.p95_ms)} · avg ${secs(data.latency.avg_ms)}`);
   if (data.by_model?.length) {
     L.push("");
-    L.push("Por modelo:");
+    L.push("By model:");
     for (const m of data.by_model) L.push(`  ${m.model.padEnd(28)} ${compact(Number(m.tokens))}  (${m.messages} msgs)`);
   }
   if (data.top_tools?.length) {
     L.push("");
-    L.push("Ferramentas: " + data.top_tools.map((t) => `${t.tool} ${t.uses}`).join(" · "));
+    L.push("Tools: " + data.top_tools.map((t) => `${t.tool} ${t.uses}`).join(" · "));
   }
   console.log(L.join("\n"));
 }

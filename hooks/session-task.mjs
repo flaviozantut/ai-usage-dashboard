@@ -42,7 +42,7 @@ async function main() {
     const id = extractTaskId(t) ?? (t ? t.split(/\s+/)[0] : null);
     if (id) {
       setTask(sid, id, "file");
-      return emit(`📋 Métricas desta sessão vinculadas à tarefa **${id}** (via .dash-task).`);
+      return emit(`📋 This session's metrics are linked to task **${id}** (via .dash-task).`);
     }
   } catch {}
 
@@ -58,18 +58,18 @@ async function main() {
   const fromBranch = extractTaskId(branch);
   if (fromBranch) {
     setTask(sid, fromBranch, "branch");
-    return emit(`📋 Métricas desta sessão vinculadas à tarefa **${fromBranch}** (detectada no branch \`${branch}\`).`);
+    return emit(`📋 This session's metrics are linked to task **${fromBranch}** (detected from branch \`${branch}\`).`);
   }
 
   // 3) not identified precisely → ask the user
   emit(
-    `📋 Rastreamento de tarefa: não foi possível identificar com precisão a qual tarefa ` +
-      `(Jira/issue) esta sessão se refere` +
-      (branch ? ` — o branch \`${branch}\` não contém um ID de tarefa reconhecível.` : `.`) +
-      ` ANTES de começar o trabalho, pergunte ao usuário qual é o ID da tarefa desta sessão ` +
-      `(ex.: PROJ-123). Quando o usuário responder, confirme repetindo o ID; ele será ` +
-      `capturado automaticamente e vinculado às métricas. O usuário também pode informar ` +
-      `a qualquer momento escrevendo "#task PROJ-123".`
+    `📋 Task tracking: could not precisely identify which task ` +
+      `(Jira/issue) this session refers to` +
+      (branch ? ` — branch \`${branch}\` does not contain a recognizable task ID.` : `.`) +
+      ` BEFORE starting the work, ask the user for this session's task ID ` +
+      `(e.g. PROJ-123). When the user replies, confirm by repeating the ID; it will be ` +
+      `captured automatically and linked to the metrics. The user can also provide it ` +
+      `at any time by writing "#task PROJ-123".`
   );
 }
 

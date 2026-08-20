@@ -35,14 +35,14 @@ async function main() {
   const explicit = extractExplicitTask(prompt);
   if (explicit) {
     setTask(sid, explicit, "explicit");
-    return emit(`📋 Tarefa da sessão definida como **${explicit}**. Métricas serão vinculadas a ela.`);
+    return emit(`📋 Session task set to **${explicit}**. Metrics will be linked to it.`);
   }
 
   if (!getTask(sid)) {
     const id = extractTaskId(prompt);
     if (id) {
       setTask(sid, id, "prompt");
-      return emit(`📋 Tarefa **${id}** detectada e vinculada às métricas desta sessão.`);
+      return emit(`📋 Task **${id}** detected and linked to this session's metrics.`);
     }
   }
 }
