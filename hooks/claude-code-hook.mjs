@@ -10,7 +10,7 @@
  *
  * Writes straight to the local SQLite DB — no server to keep running.
  *
- * Env: DB_PATH (SQLite file), DASH_STATE (dir; default ~/.claude/dash-state)
+ * Env: IA_USAGE_DASHBOARD_DB_PATH (SQLite file), DASH_STATE (dir; default ~/.claude/dash-state)
  */
 import { openSync, readSync, closeSync, statSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

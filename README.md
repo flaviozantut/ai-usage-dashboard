@@ -43,10 +43,10 @@ or fall back to `node ./hooks/<file>.mjs` with a path.)
 
 There is **no service to start**. The hooks write to the DB directly and the MCP server is
 spawned on demand by your client. The DB defaults to `metrics.db` at the repo root; set
-`DB_PATH` only if you keep it elsewhere:
+`IA_USAGE_DASHBOARD_DB_PATH` only if you keep it elsewhere:
 
 ```bash
-export DB_PATH="$HOME/somewhere/metrics.db"   # optional; the commands find the repo DB by default
+export IA_USAGE_DASHBOARD_DB_PATH="$HOME/somewhere/metrics.db"   # optional; the commands find the repo DB by default
 ```
 
 ### 1. Enable the Claude Code hook
@@ -156,7 +156,7 @@ Pieces: the `ai-usage-stats` command ([scripts/task-stats.mjs](scripts/task-stat
 resolves the task and reads the local SQLite DB directly via `taskStats()` in
 [lib/db.mjs](lib/db.mjs)) + the command in `~/.claude/commands/dash_stats.md`. Run it as
 `ai-usage-stats DEMO-100` (or `npm run stats -- DEMO-100` from the repo). Point it at a
-non-default DB with `DB_PATH`. The active task is the session's most recent task state.
+non-default DB with `IA_USAGE_DASHBOARD_DB_PATH`. The active task is the session's most recent task state.
 
 ## History backfill (optional, runs once)
 

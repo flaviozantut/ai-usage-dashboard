@@ -6,7 +6,7 @@
  *
  * Writes straight to the local SQLite DB — no server needed.
  *
- * Env: DB_PATH (SQLite file), CLAUDE_DIR (default ~/.claude/projects)
+ * Env: IA_USAGE_DASHBOARD_DB_PATH (SQLite file), CLAUDE_DIR (default ~/.claude/projects)
  */
 import { readdir } from "node:fs/promises";
 import { createReadStream } from "node:fs";

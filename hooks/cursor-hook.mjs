@@ -12,7 +12,7 @@
  *
  * Register it in ~/.cursor/hooks.json (see hooks/cursor-hooks.example.json).
  * Writes straight to the local SQLite DB — no server to keep running.
- * Env: DB_PATH (SQLite file), CURSOR_API_KEY (optional),
+ * Env: IA_USAGE_DASHBOARD_DB_PATH (SQLite file), CURSOR_API_KEY (optional),
  *      CURSOR_LOOKBACK_MIN (default 30), CURSOR_THROTTLE_S (default 120),
  *      DASH_STATE (default ~/.cursor/dash-state)
  */

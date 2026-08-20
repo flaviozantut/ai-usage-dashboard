@@ -7,7 +7,7 @@
  *                                    (most recent task state file)
  *
  * Reads the local SQLite DB directly — no server needed.
- * Env: DB_PATH (SQLite file), DASH_STATE.
+ * Env: IA_USAGE_DASHBOARD_DB_PATH (SQLite file), DASH_STATE.
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";

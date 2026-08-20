@@ -5,7 +5,7 @@
  *
  * Writes straight to the local SQLite DB — no server needed.
  *
- * Env: DB_PATH (SQLite file), CURSOR_API_KEY (required), CURSOR_DAYS (default 30)
+ * Env: IA_USAGE_DASHBOARD_DB_PATH (SQLite file), CURSOR_API_KEY (required), CURSOR_DAYS (default 30)
  */
 import { fetchTokenEvents, fetchDailyProductivity } from "../lib/cursor-api.mjs";
 import { insertEvents } from "../lib/db.mjs";
