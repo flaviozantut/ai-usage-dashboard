@@ -126,8 +126,11 @@ happens automatically at the start of the session, in order of precision:
 1. **`.dash-task`** — file at the repo root with the ID (explicit override).
 2. **Git branch** — a Jira-style ID in the branch name (`feature/PROJ-123-...` → `PROJ-123`).
 3. **User prompt** — an ID mentioned, or the explicit marker `#task PROJ-123` (correct it any time).
-4. **If none of the above resolves precisely** → the `SessionStart` hook injects context and
-   Claude **asks the user for the ID** before starting. The reply is captured on its own.
+4. **If none of the above resolves precisely** → the `SessionStart` hook injects context
+   instructing Claude to **ask the user for the ID** before starting (best-effort — a
+   `SessionStart` hook can't block, so the model may skip the question). Regardless of
+   whether it asks, the reply is captured on its own by the `UserPromptSubmit` hook, so the
+   guaranteed ways to set the task are `.dash-task`, the branch name, or `#task PROJ-123`.
 
 Hooks involved (registered in `~/.claude/settings.json`):
 

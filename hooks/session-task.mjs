@@ -4,7 +4,9 @@
  *
  * Precedence order: .dash-task file in the repo → git branch → (nothing) ask the user.
  * When it resolves, it writes the session→task state. When it can't resolve precisely, it
- * injects context instructing Claude to ask the user for the ID before proceeding.
+ * injects context instructing Claude to make asking the user for the ID its first action,
+ * before any other work. This is best-effort — a SessionStart hook cannot block, so the
+ * model may still skip it; the reply is captured either way by the UserPromptSubmit hook.
  *
  * Register it in ~/.claude/settings.json under SessionStart.
  */
@@ -66,10 +68,14 @@ async function main() {
     `📋 Task tracking: could not precisely identify which task ` +
       `(Jira/issue) this session refers to` +
       (branch ? ` — branch \`${branch}\` does not contain a recognizable task ID.` : `.`) +
-      ` BEFORE starting the work, ask the user for this session's task ID ` +
-      `(e.g. PROJ-123). When the user replies, confirm by repeating the ID; it will be ` +
-      `captured automatically and linked to the metrics. The user can also provide it ` +
-      `at any time by writing "#task PROJ-123".`
+      `\n\nYour VERY FIRST action in this session MUST be to ask the user for this ` +
+      `session's task ID (e.g. PROJ-123). Do NOT start, plan, or perform any other ` +
+      `work — not even reading files — until you have asked. Ask in a single short ` +
+      `question, then stop and wait for the reply. When the user answers, confirm by ` +
+      `repeating the ID back; it is then captured automatically and linked to the ` +
+      `metrics (no manual step). If the user says there is no task or tells you to ` +
+      `proceed, continue without one and do not ask again. The user can also set or ` +
+      `correct it at any time by writing "#task PROJ-123".`
   );
 }
 
